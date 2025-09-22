@@ -176,60 +176,69 @@ class NBATeamSelector:
     def create_optimal_labels(self, df):
         """Create target labels for optimal team selection"""
         labels = []
-        
-        for _, player in df.iterrows():
-            # Multi-criteria player evaluation
+    
+        # Ensure we're working with a clean dataframe
+        df_clean = df.dropna(subset=['PPG', 'RPG', 'APG'], how='all').copy()
+    
+        for idx, player in df_clean.iterrows():
+         # Multi-criteria player evaluation with safe defaults
             offensive_score = (
-                player.get('PPG', 10) * 0.3 +
-                player.get('APG', 2) * 0.4 + 
-                player.get('TS_PCT', 0.55) * 20 +
-                player.get('USG_PCT', 20) * 0.2
-            )
-            
-            rebounding_score = (
-                player.get('RPG', 4) * 0.4 + 
-                player.get('OREB_PCT', 5) * 0.3 +
-                player.get('DREB_PCT', 15) * 0.3
-            )
-            
-            impact_score = (
-                player.get('Net_Rating', 0) * 0.5 +
-                player.get('GP', 70) / 82 * 5
-            )
-            
-            # Age factor
-            age = player.get('Age', 27)
-            age_factor = 1.0 if 24 <= age <= 30 else (0.9 if 22 <= age <= 32 else 0.8)
-            
-            # Combined rating
-            overall_rating = (
-                offensive_score * 0.40 + 
-                rebounding_score * 0.25 + 
-                impact_score * 0.20 + 
-                age_factor * 0.15
-            )
-            
-            # Position-specific bonuses
-            position = player.get('Position', 'SF')
-            if position == 'PG':
-                overall_rating += player.get('APG', 2) * 0.3
-            elif position == 'C':
-                overall_rating += player.get('RPG', 5) * 0.2
-            
-            # Label as optimal if above 70th percentile for position
-            position_players = df[df['Position'] == position]
-            if len(position_players) > 1:
-                threshold = np.percentile([
-                    (p.get('PPG', 10) + p.get('RPG', 4) + p.get('APG', 2))
-                    for _, p in position_players.iterrows()
-                ], 70)
-                is_optimal = overall_rating > threshold
-            else:
-                is_optimal = overall_rating > 15  # Default threshold
-            
-            labels.append(1 if is_optimal else 0)
+            player.get('PPG', 10) * 0.3 +
+            player.get('APG', 2) * 0.4 + 
+            player.get('TS_PCT', 0.55) * 20 +
+            player.get('USG_PCT', 20) * 0.2
+        )
         
-        return np.array(labels)
+        rebounding_score = (
+            player.get('RPG', 4) * 0.4 + 
+            player.get('OREB_PCT', 5) * 0.3 +
+            player.get('DREB_PCT', 15) * 0.3
+        )
+        
+        impact_score = (
+            player.get('Net_Rating', 0) * 0.5 +
+            player.get('GP', 70) / 82 * 5
+        )
+        
+        # Age factor
+        age = player.get('Age', 27)
+        age_factor = 1.0 if 24 <= age <= 30 else (0.9 if 22 <= age <= 32 else 0.8)
+        
+        # Combined rating
+        overall_rating = (
+            offensive_score * 0.40 + 
+            rebounding_score * 0.25 + 
+            impact_score * 0.20 + 
+            age_factor * 0.15
+        )
+        
+        # Position-specific bonuses
+        position = player.get('Position', 'SF')
+        if position == 'PG':
+            overall_rating += player.get('APG', 2) * 0.3
+        elif position == 'C':
+            overall_rating += player.get('RPG', 5) * 0.2
+        
+        labels.append(overall_rating)
+    
+        # Convert to binary labels based on percentile threshold
+        if len(labels) > 0:
+            # Use 60th percentile as threshold to ensure balanced classes
+            threshold = np.percentile(labels, 60)
+            binary_labels = [1 if score > threshold else 0 for score in labels]
+        
+        # Ensure we have both classes
+        if len(set(binary_labels)) < 2:
+            # If all same class, make top 40% optimal
+            sorted_indices = np.argsort(labels)[::-1]
+            optimal_count = max(1, len(labels) // 2)  # At least 1, but roughly half
+            binary_labels = [0] * len(labels)
+            for i in range(optimal_count):
+                binary_labels[sorted_indices[i]] = 1
+        
+            return np.array(binary_labels)
+        else:
+            return np.array([])  # Return empty array if no valid players
     
     def train_model(self, X, y):
         """Train the neural network model"""
@@ -394,33 +403,69 @@ def main():
         
         if st.button("🚀 Train Neural Network", type="primary"):
             with st.spinner("Training AI model on NBA data..."):
-                # Prepare features
+            # Prepare features
                 feature_cols = ['Age', 'Height', 'Weight', 'PPG', 'RPG', 'APG']
-                
-                # Add advanced metrics if available
-                advanced_cols = ['Net_Rating', 'OREB_PCT', 'DREB_PCT', 'USG_PCT', 'TS_PCT', 'AST_PCT']
-                available_advanced = [col for col in advanced_cols if col in df.columns]
-                feature_cols.extend(available_advanced)
-                
-                # Get features that exist in dataset
-                available_features = [col for col in feature_cols if col in df.columns]
-                X = df[available_features].values
-                
-                # Add position encoding
-                if 'Position' in df.columns:
-                    position_dummies = pd.get_dummies(df['Position'], prefix='pos')
-                    X_with_pos = np.concatenate([X, position_dummies.values], axis=1)
-                    feature_names = available_features + list(position_dummies.columns)
-                else:
-                    X_with_pos = X
-                    feature_names = available_features
-                
-                # Create target labels
-                y = selector.create_optimal_labels(df)
-                
+        
+            # Add advanced metrics if available
+            advanced_cols = ['Net_Rating', 'OREB_PCT', 'DREB_PCT', 'USG_PCT', 'TS_PCT', 'AST_PCT']
+            available_advanced = [col for col in advanced_cols if col in df.columns]
+            feature_cols.extend(available_advanced)
+        
+            # Get features that exist in dataset
+            available_features = [col for col in feature_cols if col in df.columns]
+        
+            # Check if we have any features
+            if not available_features:
+                st.error("❌ No valid features found in the dataset!")
+                return
+        
+            # Create feature matrix
+            X = df[available_features].copy()
+
+            # Handle missing values
+            for col in X.columns:
+                X[col] = X[col].fillna(X[col].median())
+
+            # Convert to numpy array
+            X_numeric = X.values
+
+            # Add position encoding if Position column exists
+            if 'Position' in df.columns:
+                position_dummies = pd.get_dummies(df['Position'], prefix='pos')
+                X_with_pos = np.concatenate([X_numeric, position_dummies.values], axis=1)
+                feature_names = available_features + list(position_dummies.columns)
+            else:
+                X_with_pos = X_numeric
+                feature_names = available_features
+
+            # Create target labels - IMPORTANT: Use the same dataframe indices
+            y = selector.create_optimal_labels(df)
+        
+            # Debug information
+            st.write(f"Debug: X shape: {X_with_pos.shape}, y shape: {y.shape}")
+            st.write(f"Debug: Number of samples match: {X_with_pos.shape[0] == len(y)}")
+
+            # Ensure shapes match
+            if X_with_pos.shape[0] != len(y):
+                st.error(f"❌ Shape mismatch: Features have {X_with_pos.shape[0]} samples, labels have {len(y)} samples")
+                return
+        
+            # Check for valid data
+            if len(y) == 0 or X_with_pos.shape[0] == 0:
+                st.error("❌ No valid data found for training!")
+                return
+
+            # Check if we have both classes
+            unique_labels = np.unique(y)
+            if len(unique_labels) < 2:
+                st.error("❌ Need both optimal and non-optimal players for training!")
+                st.write(f"Found labels: {unique_labels}")
+                return
+
+            try:
                 # Train model
                 results = selector.train_model(X_with_pos, y)
-                
+            
                 # Store results
                 st.session_state['results'] = results
                 st.session_state['X'] = X_with_pos
@@ -428,8 +473,15 @@ def main():
                 st.session_state['feature_names'] = feature_names
                 st.session_state['available_features'] = available_features
             
-            st.success("🎯 Model training completed!")
-        
+                st.success("🎯 Model training completed!")
+            
+            except Exception as e:
+                st.error(f"❌ Training failed: {str(e)}")
+                st.write("Debug information:")
+                st.write(f"X_with_pos shape: {X_with_pos.shape}")
+                st.write(f"y shape: {y.shape}")
+                st.write(f"y unique values: {np.unique(y)}")
+                return
         if 'results' in st.session_state:
             results = st.session_state['results']
             
@@ -881,5 +933,4 @@ def main():
         """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
-
     main()
