@@ -319,13 +319,12 @@ def main():
     st.sidebar.markdown("### Model Settings")
     st.sidebar.info("Using Multi-Layer Perceptron:\n- 64 → 32 → 16 → 8 → 1 neurons\n- ReLU activation\n- Adam optimizer")
     
-    # Main application tabs
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    # Main application tabs - removed the Documentation tab
+    tab1, tab2, tab3, tab4 = st.tabs([
         "📊 Data Analysis", 
         "🧠 Model Training", 
         "🏆 Team Selection", 
-        "📈 Performance Analysis",
-        "📚 Documentation"
+        "📈 Performance Analysis"
     ])
     
     with tab1:
@@ -749,200 +748,14 @@ def main():
         else:
             st.info("Train the model first to see performance analysis")
     
-    with tab5:
-        st.header("📚 Project Documentation")
-        
-        st.subheader("🎯 Problem Statement")
-        st.markdown("""
-        This project demonstrates the application of **Artificial Neural Networks** to NBA team selection,
-        addressing the challenge of building optimal basketball teams through data-driven analysis rather 
-        than traditional subjective scouting methods.
-        
-        **Key Objectives:**
-        - Develop an AI system for objective player evaluation
-        - Create balanced 5-player teams (PG, SG, SF, PF, C)
-        - Utilize advanced NBA metrics for comprehensive assessment
-        - Demonstrate superior performance vs traditional selection methods
-        """)
-        
-        st.subheader("🧠 Algorithm Overview")
-        st.markdown("""
-        **Multi-Layer Perceptron (MLP) Architecture:**
-        - **Input Layer:** NBA player features (physical + performance statistics)
-        - **Hidden Layers:** 64 → 32 → 16 → 8 neurons with ReLU activation
-        - **Output Layer:** Single neuron with sigmoid activation (binary classification)
-        - **Regularization:** L2 penalty, early stopping, adaptive learning rate
-        
-        **Training Process:**
-        1. **Forward Propagation:** Input features → Hidden layers → Output prediction
-        2. **Loss Calculation:** Binary cross-entropy loss function
-        3. **Backpropagation:** Gradient descent with Adam optimizer
-        4. **Weight Updates:** Adaptive learning rate with momentum
-        5. **Validation:** Early stopping to prevent overfitting
-        """)
-        
-        st.subheader("🏀 Basketball Analytics Integration")
-        st.markdown("""
-        **Feature Engineering:**
-        - **Physical Attributes:** Age, Height, Weight
-        - **Scoring Metrics:** Points per game, True Shooting %
-        - **Playmaking:** Assists, Assist percentage
-        - **Rebounding:** Total rebounds, Offensive/Defensive rebound %
-        - **Advanced Metrics:** Net Rating, Usage %, Games Played
-        - **Position Encoding:** One-hot encoding for basketball positions
-        
-        **Multi-Criteria Player Evaluation:**
-        - Offensive Rating (40%): Scoring + Efficiency + Usage
-        - Rebounding Rating (25%): Board control and interior presence
-        - Impact Rating (20%): Team performance and availability
-        - Age Factor (15%): Peak performance years optimization
-        """)
-        
-        st.subheader("📊 Key Findings")
-        if 'results' in st.session_state:
-            results = st.session_state['results']
-            accuracy = accuracy_score(results['y_test'], results['y_pred'])
-            
-            st.markdown(f"""
-            **Model Performance:**
-            - **Test Accuracy:** {accuracy:.1%}
-            - **Training Iterations:** {results['n_iterations']}
-            - **Final Loss:** {results['training_score']:.4f}
-            
-            **Basketball Insights:**
-            - Advanced metrics (Net Rating, TS%) proved most predictive
-            - Position-specific evaluation improved team balance
-            - Age optimization favored players in prime years (24-30)
-            - AI selection achieved better overall team balance than traditional methods
-            """)
-        else:
-            st.markdown("""
-            **Expected Findings:**
-            - Neural network achieves 80-90% accuracy in player classification
-            - Advanced metrics outperform traditional statistics
-            - Position-specific weighting improves team composition
-            - AI-selected teams show better balance across all skill areas
-            """)
-        
-        st.subheader("🔬 Technical Implementation")
-        st.markdown("""
-        **Machine Learning Pipeline:**
-        ```python
-        # Data preprocessing
-        scaler = StandardScaler()
-        X_scaled = scaler.fit_transform(features)
-        
-        # Model architecture
-        model = MLPClassifier(
-            hidden_layer_sizes=(64, 32, 16, 8),
-            activation='relu',
-            solver='adam',
-            alpha=0.001,
-            early_stopping=True
-        )
-        
-        # Training and evaluation
-        model.fit(X_train, y_train)
-        predictions = model.predict_proba(X_test)
-        ```
-        
-        **Deployment Architecture:**
-        - **Frontend:** Streamlit web application
-        - **Backend:** Scikit-learn MLPClassifier
-        - **Data Processing:** Pandas, NumPy
-        - **Visualizations:** Plotly interactive charts
-        - **Hosting:** Streamlit Community Cloud
-        """)
-        
-        st.subheader("🚀 Real-World Applications")
-        st.markdown("""
-        **Professional Basketball:**
-        - NBA draft strategy and player evaluation
-        - Trade analysis and roster construction
-        - Salary cap optimization
-        - Injury replacement identification
-        
-        **Fantasy Sports:**
-        - Daily fantasy lineup optimization
-        - Season-long draft strategy
-        - Waiver wire pickup recommendations
-        - Trade evaluation assistance
-        
-        **Sports Analytics:**
-        - Player development pathway identification
-        - Coaching strategy optimization
-        - Performance prediction modeling
-        - Talent scouting automation
-        """)
-        
-        st.subheader("📈 Future Enhancements")
-        st.markdown("""
-        **Advanced Modeling:**
-        - Ensemble methods (Random Forest + Neural Network)
-        - Deep learning with player tracking data
-        - Reinforcement learning for dynamic lineup optimization
-        - Transfer learning from other sports
-        
-        **Data Integration:**
-        - Real-time NBA API integration
-        - Player injury and health data
-        - Advanced defensive metrics (player tracking)
-        - Team chemistry and compatibility metrics
-        
-        **Practical Features:**
-        - Salary cap constraint optimization
-        - Multi-objective team construction
-        - Opponent-specific lineup recommendations
-        - Player development trajectory modeling
-        """)
-        
-        st.subheader("📚 References and Sources")
-        st.markdown("""
-        **Academic Literature:**
-        - LeCun, Y., Bengio, Y., & Hinton, G. (2015). Deep learning. Nature.
-        - Oliver, D. (2004). Basketball on Paper. Potomac Books.
-        - Kubatko, J. et al. (2007). Basketball statistics analysis. Journal of Quantitative Analysis in Sports.
-        
-        **Technical Resources:**
-        - Scikit-learn Documentation: Machine Learning in Python
-        - NBA.com/stats: Official NBA statistical database
-        - Basketball-Reference.com: Historical NBA analytics
-        - Streamlit Documentation: Web application framework
-        
-        **Basketball Analytics:**
-        - Basketball Analytics Community: Open source research
-        - ESPN Player Efficiency Rating methodology
-        - FiveThirtyEight NBA analytics and projections
-        - Synergy Sports Technology: Video-based analytics
-        """)
-        
-        st.subheader("🎓 Educational Value")
-        st.markdown("""
-        **Learning Outcomes:**
-        - Understanding neural network architecture and training
-        - Sports analytics and feature engineering
-        - Data visualization and interpretation
-        - Machine learning model evaluation and validation
-        - Real-world application of AI in decision-making
-        
-        **Skills Demonstrated:**
-        - Python programming and data science libraries
-        - Machine learning model development and deployment
-        - Interactive web application creation
-        - Statistical analysis and interpretation
-        - Domain expertise integration (basketball knowledge)
-        """)
-        
-        # App information
-        st.markdown("---")
-        st.markdown("""
-        <div style='text-align: center; color: #666; padding: 20px;'>
-        <h4>🏀 NBA Optimal Team Selection using Artificial Neural Networks</h4>
-        <p>Developed using Streamlit, Scikit-learn, and advanced basketball analytics</p>
-        <p><strong>Assignment:</strong> CST-435 Artificial Neural Network Model</p>
-        <p><strong>Objective:</strong> Select optimal 5-player team from 100 NBA players using MLP</p>
-        </div>
-        """, unsafe_allow_html=True)
+    # App footer
+    st.markdown("---")
+    st.markdown("""
+    <div style='text-align: center; color: #666; padding: 20px;'>
+    <h4>🏀 NBA Optimal Team Selection using Artificial Neural Networks</h4>
+    <p>Developed using Streamlit, Scikit-learn, and advanced basketball analytics</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
     main()
