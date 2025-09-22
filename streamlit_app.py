@@ -176,66 +176,78 @@ class NBATeamSelector:
     def create_optimal_labels(self, df):
         """Create target labels for optimal team selection"""
         labels = []
-    
-        # Ensure we're working with a clean dataframe
-        df_clean = df.dropna(subset=['PPG', 'RPG', 'APG'], how='all').copy()
-    
-        for idx, player in df_clean.iterrows():
-         # Multi-criteria player evaluation with safe defaults
+
+        # Don't drop rows - work with the original dataframe
+        # Fill missing values with defaults instead
+        df_work = df.copy()
+
+        for idx, player in df_work.iterrows():
+            # Multi-criteria player evaluation with safe defaults
+            # Use .get() with sensible defaults for missing values
+            ppg = player.get('PPG') if pd.notna(player.get('PPG')) else 10.0
+            apg = player.get('APG') if pd.notna(player.get('APG')) else 2.0
+            rpg = player.get('RPG') if pd.notna(player.get('RPG')) else 4.0
+            ts_pct = player.get('TS_PCT') if pd.notna(player.get('TS_PCT')) else 0.55
+            usg_pct = player.get('USG_PCT') if pd.notna(player.get('USG_PCT')) else 20.0
+            net_rating = player.get('Net_Rating') if pd.notna(player.get('Net_Rating')) else 0.0
+            oreb_pct = player.get('OREB_PCT') if pd.notna(player.get('OREB_PCT')) else 5.0
+            dreb_pct = player.get('DREB_PCT') if pd.notna(player.get('DREB_PCT')) else 15.0
+            gp = player.get('GP') if pd.notna(player.get('GP')) else 70
+            age = player.get('Age') if pd.notna(player.get('Age')) else 27
+
             offensive_score = (
-            player.get('PPG', 10) * 0.3 +
-            player.get('APG', 2) * 0.4 + 
-            player.get('TS_PCT', 0.55) * 20 +
-            player.get('USG_PCT', 20) * 0.2
-        )
+                ppg * 0.3 +
+                apg * 0.4 + 
+                ts_pct * 20 +
+                usg_pct * 0.2
+            )
+
+            rebounding_score = (
+                rpg * 0.4 + 
+                oreb_pct * 0.3 +
+                dreb_pct * 0.3
+            )
+
+            impact_score = (
+                net_rating * 0.5 +
+                gp / 82 * 5
+            )
         
-        rebounding_score = (
-            player.get('RPG', 4) * 0.4 + 
-            player.get('OREB_PCT', 5) * 0.3 +
-            player.get('DREB_PCT', 15) * 0.3
-        )
+            # Age factor
+            age_factor = 1.0 if 24 <= age <= 30 else (0.9 if 22 <= age <= 32 else 0.8)
+
+            # Combined rating
+            overall_rating = (
+                offensive_score * 0.40 + 
+                rebounding_score * 0.25 + 
+                impact_score * 0.20 + 
+                age_factor * 0.15
+            )
         
-        impact_score = (
-            player.get('Net_Rating', 0) * 0.5 +
-            player.get('GP', 70) / 82 * 5
-        )
-        
-        # Age factor
-        age = player.get('Age', 27)
-        age_factor = 1.0 if 24 <= age <= 30 else (0.9 if 22 <= age <= 32 else 0.8)
-        
-        # Combined rating
-        overall_rating = (
-            offensive_score * 0.40 + 
-            rebounding_score * 0.25 + 
-            impact_score * 0.20 + 
-            age_factor * 0.15
-        )
-        
-        # Position-specific bonuses
-        position = player.get('Position', 'SF')
-        if position == 'PG':
-            overall_rating += player.get('APG', 2) * 0.3
-        elif position == 'C':
-            overall_rating += player.get('RPG', 5) * 0.2
-        
-        labels.append(overall_rating)
-    
+            # Position-specific bonuses
+            position = player.get('Position', 'SF')
+            if position == 'PG':
+                overall_rating += apg * 0.3
+            elif position == 'C':
+                overall_rating += rpg * 0.2
+
+            labels.append(overall_rating)
+
         # Convert to binary labels based on percentile threshold
         if len(labels) > 0:
             # Use 60th percentile as threshold to ensure balanced classes
             threshold = np.percentile(labels, 60)
             binary_labels = [1 if score > threshold else 0 for score in labels]
-        
-        # Ensure we have both classes
-        if len(set(binary_labels)) < 2:
-            # If all same class, make top 40% optimal
-            sorted_indices = np.argsort(labels)[::-1]
-            optimal_count = max(1, len(labels) // 2)  # At least 1, but roughly half
-            binary_labels = [0] * len(labels)
-            for i in range(optimal_count):
-                binary_labels[sorted_indices[i]] = 1
-        
+
+            # Ensure we have both classes
+            if len(set(binary_labels)) < 2:
+                # If all same class, make top 40% optimal
+                sorted_indices = np.argsort(labels)[::-1]
+                optimal_count = max(1, len(labels) // 2)  # At least 1, but roughly half
+                binary_labels = [0] * len(labels)
+                for i in range(optimal_count):
+                   binary_labels[sorted_indices[i]] = 1
+
             return np.array(binary_labels)
         else:
             return np.array([])  # Return empty array if no valid players
