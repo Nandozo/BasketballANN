@@ -272,7 +272,7 @@ class NBATeamSelector:
             'y_test': y_test,
             'y_pred': y_pred,
             'y_pred_proba': y_pred_proba,
-            'training_score': self.model.best_loss_,
+            'training_score': self.model.loss_,
             'n_iterations': self.model.n_iter_
         }
 
@@ -881,4 +881,5 @@ def main():
         """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
+
     main()
